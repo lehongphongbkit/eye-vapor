@@ -2,6 +2,6 @@
     "hostname": "127.0.0.1",
     "user": "root",
     "password": "abcd1234",
-    "database": "vapor",
+    "database": "eye",
     "encoding": "utf8"
 }

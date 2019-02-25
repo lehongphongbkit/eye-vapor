@@ -57,8 +57,6 @@ class UserCollection: RouteCollection {
             var passwordValue = ""
             var emailValue = ""
             var phoneValue: String?
-            var latValue: Double?
-            var longValue: Double?
             var gender: Bool?
             var birthday: String?
             if let json = req.json {

@@ -1,7 +1,7 @@
 {
-    "hostname": "127.0.0.1",
-    "user": "root",
-    "password": "abcd1234",
-    "database": "eye",
+    "hostname": "db4free.net",
+    "user": "phongle016",
+    "password": "hp050769",
+    "database": "eyevapor",
     "encoding": "utf8"
 }

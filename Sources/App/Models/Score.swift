@@ -9,7 +9,7 @@ import Vapor
 import FluentProvider
 import HTTP
 
-public let SCORE_OF_VOCAB: Int = 5
+public let SCORE_OF_VOCAB: Int = 15
 final class Score: Model {
     
     // MARK: - Defining

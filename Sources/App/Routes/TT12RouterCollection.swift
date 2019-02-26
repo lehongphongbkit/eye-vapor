@@ -36,7 +36,31 @@ class TT12RouterCollection: RouteCollection {
     init(drop: Droplet) {
         self.drop = drop
     }
-
+    
+    func makeJsonTopic(nodes: [Node]) throws -> [JSON] {
+        var datas: [JSON] = []
+        try nodes.forEach({ (node) in
+            var data = JSON()
+            try data.set(Topic.Keys.id, node.get(Topic.Keys.id) as Int)
+            try data.set(Topic.Keys.name, node.get(Topic.Keys.name) as String)
+            try data.set(Topic.Keys.isSystem, node.get(Topic.Keys.isSystem) as Bool)
+            try data.set(Topic.Keys.status, node.get(Topic.Keys.status) as Bool)
+            try data.set(Topic.Keys.userId, node.get(Topic.Keys.userId) as Int)
+            try data.set(Topic.Keys.levelId, node.get(Topic.Keys.levelId) as Int)
+            try data.set(Topic.Keys.levelName, node.get(Topic.Keys.levelName) as String)
+            try data.set(Topic.Keys.totalLike, node.get(Topic.Keys.totalLike) as Int)
+            try data.set(Topic.Keys.totalComment, node.get(Topic.Keys.totalComment) as Int)
+            let totalVocab: Int = try node.get(Topic.Keys.totalVocab)
+            try data.set(Topic.Keys.totalVocab, totalVocab)
+            try data.set(Topic.Keys.totalScore, totalVocab * SCORE_OF_VOCAB)
+            try data.set(Topic.Keys.achievedScore, node.get(Topic.Keys.achievedScore) as Int)
+            try data.set(Topic.Keys.description, node.get(Topic.Keys.description) as String)
+            try data.set(Topic.Keys.isFavorite, node.get(Topic.Keys.isFavorite) as Bool)
+            datas.append(data)
+        })
+        return datas
+    }
+    
     func build(_ builder: RouteBuilder) throws {
         // MARK: - User
         let user = builder.grouped(Keys.user)
@@ -137,23 +161,33 @@ class TT12RouterCollection: RouteCollection {
         //MARK: - levels
         auth.get("levels") { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
-//            let queryStr = "SELECT count(tp.id) as completed_topic, "
-//                + "(SELECT count(vapor.topics.id) FROM vapor.topics "
-//                + "WHERE level_id = \(idLevel)) as total_topic "
-//                + "FROM vapor.topics as tp inner join vapor.scores on scores.topic_id = tp.id "
-//                + "WHERE is_system = 1 and level_id = \(idLevel) and "
-//                + "scores.user_id = \(userID) and score>= "
-//                + "\(SCORE_OF_VOCAB) * (SELECT count(topic_vocabulary.id) "
-//                + "FROM vapor.topics as tp2 inner join "
-//                + "vapor.topic_vocabulary on tp2.id = topic_id where tp2.id = tp.id)* 0.8"
-            var datas: [JSON] = []
-            let levels = try Level.all()
-            for level in levels {
-                datas.append(try level.makeFullJSON(user: user))
+            guard let userID = try user.assertExists().int, let levelID = user.levelId.int else { throw Abort.badRequest }
+            let queryStr = "SELECT id, name, (id > \(levelID)) as isLock,"
+                        + "(select count(id) from topics where topics.level_id = levels.id ) as total_topic,"
+                        + "(select count(tp1.id) from topics as tp1 inner join scores on tp1.id = scores.topic_id where is_system = 1 and tp1.level_id = levels.id and scores.user_id = \(userID) and score >= \(SCORE_OF_VOCAB) * (SELECT count(topic_vocabulary.id)  FROM topics as tp2  inner join topic_vocabulary on tp2.id = topic_vocabulary.topic_id where tp2.id = tp1.id)* 0.8) as completed_topic "
+                        + "FROM levels"
+            print(queryStr)
+            
+            func makeJSON(nodes: [Node]) throws -> JSON {
+                var json = JSON()
+                var datas: [JSON] = []
+                try nodes.forEach({ (node) in
+                    var data = JSON()
+                    try data.set(Level.Keys.id, node.get(Level.Keys.id) as Int)
+                    try data.set(Level.Keys.name, node.get(Level.Keys.name) as String)
+                    try data.set(Level.Keys.isLock, node.get(Level.Keys.isLock) as Bool)
+                    try data.set(Level.Keys.totalTopic, node.get(Level.Keys.totalTopic) as Int)
+                    try data.set(Level.Keys.completedTopic, node.get(Level.Keys.completedTopic) as Int)
+                    datas.append(data)
+                })
+                try json.set("data", datas)
+                return json
             }
-            var json = JSON()
-            try json.set("data", datas)
-            return json
+            
+            if let nodes = try self.drop.database?.raw(queryStr).array {
+                return try makeJSON(nodes: nodes)
+            }
+            throw Abort.badRequest
         }
 
         //MARK: - List topic from use
@@ -176,14 +210,21 @@ class TT12RouterCollection: RouteCollection {
         topics.get("system", Int.parameter) { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
             let levelId = try request.parameters.next(Int.self)
-            let topics = try Topic.makeQuery().filter(raw: "(is_system = \(true)) AND level_id = \(levelId)").all()
-            var json = JSON()
-            var datas: [JSON] = []
-            for topic in topics {
-                datas.append(try topic.makeFullJson(userID: user.assertExists()))
+            guard let userID = try user.assertExists().int else { throw Abort.badRequest }
+            let queryStr = "SELECT id,  name, status, is_system, user_id, level_id, total_like, total_comment, "
+                        + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
+                        + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                        + "IFNULL((select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id), '') as description, "
+                        + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
+                        + "(select name from levels where levels.id = topics.level_id ) as level_name "
+                        + "FROM  topics where is_system = true and level_id = \(levelId)"
+            print(queryStr)
+            if let nodes = try self.drop.database?.raw(queryStr).array {
+                var json = JSON()
+                try json.set("datas", try self.makeJsonTopic(nodes: nodes))
+                return json
             }
-            try json.set("data", datas)
-            return json
+            throw Abort.badRequest
         }
 
         //MARK: - All public topics when level
@@ -270,32 +311,53 @@ class TT12RouterCollection: RouteCollection {
         //MARK: - topic detail
         auth.get("topic", Int.parameter) { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
-            if let userID = try user.assertExists().int {
-                let id = try request.parameters.next(Int.self)
-                let topic = try Topic.makeQuery().filter(raw: "(user_id = \(userID) OR status = '0' OR is_system = \(true)) AND id = \(id)").first()
-                if let topic = topic {
-                    var json = try topic.makeDetailJson()
-                    let queryStr = "SELECT scores.topic_id, scores.score FROM scores "
-                        + "WHERE `scores`.`user_id` = \(userID) and `scores`.`topic_id` = \(id) "
-                    print(queryStr)
-                    if let nodes = try self.drop.database?.raw(queryStr).array, let node = nodes.first {
-                        let score: Int = try node.get("score")
-                        try json.set("achieved_score", score)
-                    } else {
-                        try json.set("achieved_score", 0)
-
-                    }
-                    try json.set("total_score", topic.vocabularies.count() * SCORE_OF_VOCAB)
-                    let description = try topic.vocabularies.all().reduce(into: "", { (result, vocab) in
-                        result += vocab.word + ", "
-                    })
-                    try json.set("description", description)
-                    return json
-                } else {
-                    throw Abort.contentNotFound
-                }
+            let topicID = try request.parameters.next(Int.self)
+            guard let userID = try user.assertExists().int else { throw Abort.badRequest }
+            let queryStr = "SELECT id,  name, status, is_system, user_id, level_id, total_like, total_comment, "
+                + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
+                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                + "IFNULL((select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id), '') as description, "
+                + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
+                + "(select name from levels where levels.id = topics.level_id ) as level_name "
+                + "FROM  topics where id = \(topicID)"
+            print(queryStr)
+            guard let nodes = try self.drop.database?.raw(queryStr).array else { throw Abort.badRequest }
+            var json = try self.makeJsonTopic(nodes: nodes)[0]
+            guard let topic = try Topic.makeQuery().filter(raw: "id = \(topicID)").first()
+                else {
+                    throw Abort.badRequest
             }
-            throw Abort.badRequest
+            
+            let vocabs = try topic.vocabularies.all().makeJSON()
+            try json.set("vocabularies", vocabs)
+            return json
+//            let user = try request.auth.assertAuthenticated(User.self)
+//            if let userID = try user.assertExists().int {
+//                let id = try request.parameters.next(Int.self)
+//                let topic = try Topic.makeQuery().filter(raw: "(user_id = \(userID) OR status = '0' OR is_system = \(true)) AND id = \(id)").first()
+//                if let topic = topic {
+//                    var json = try topic.makeDetailJson()
+//                    let queryStr = "SELECT scores.topic_id, scores.score FROM scores "
+//                        + "WHERE `scores`.`user_id` = \(userID) and `scores`.`topic_id` = \(id) "
+//                    print(queryStr)
+//                    if let nodes = try self.drop.database?.raw(queryStr).array, let node = nodes.first {
+//                        let score: Int = try node.get("score")
+//                        try json.set("achieved_score", score)
+//                    } else {
+//                        try json.set("achieved_score", 0)
+//
+//                    }
+//                    try json.set("total_score", topic.vocabularies.count() * SCORE_OF_VOCAB)
+//                    let description = try topic.vocabularies.all().reduce(into: "", { (result, vocab) in
+//                        result += vocab.word + ", "
+//                    })
+//                    try json.set("description", description)
+//                    return json
+//                } else {
+//                    throw Abort.contentNotFound
+//                }
+//            }
+//            throw Abort.badRequest
         }
 
         //MARK: - create new topic
@@ -386,12 +448,12 @@ class TT12RouterCollection: RouteCollection {
         }
 
         //MARK: - like and unlike a topic
-        auth.post("topic/like") { req -> ResponseRepresentable in
+        topic.post("like") { req -> ResponseRepresentable in
             let user = try req.auth.assertAuthenticated(User.self)
             if let userID = try user.assertExists().int {
                 var topicId = 0
                 if let json = req.json {
-                    topicId = try json.get("topic_id")
+                    topicId = try json.get("id")
                 } else {
                     throw Abort.badRequest
                 }

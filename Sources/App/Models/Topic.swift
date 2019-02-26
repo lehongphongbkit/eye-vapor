@@ -17,6 +17,7 @@ final class Topic: Model {
         static let id = "id"
         static let name = "name"
         static let levelId = "level_id"
+        static let levelName = "level_name"
         static let userId = "user_id"
         static let status = "status"
         static let isSystem = "is_system"
@@ -26,6 +27,8 @@ final class Topic: Model {
         static let totalVocab = "total_vocab"
         static let achievedScore = "achieved_score"
         static let totalScore = "total_score"
+        static let isFavorite = "isFavorite"
+        static let description = "description"
     }
     
     // MARK: - Properties
@@ -145,8 +148,11 @@ extension Topic: JSONConvertible {
         try json.set(Keys.totalLike, totalLike)
         try json.set(Keys.status, status)
         try json.set(Keys.totalComment, totalComment)
-        try json.set(Keys.totalVocab, vocabularies.count())
-        try json.set(Keys.totalScore, vocabularies.count() * SCORE_OF_VOCAB)
+        let start = Int64(Date().timeIntervalSince1970 * 1000)
+        let totalVocab  = try vocabularies.count()
+        try json.set(Keys.totalVocab, totalVocab)
+        try json.set(Keys.totalScore, totalVocab * SCORE_OF_VOCAB)
+        print(start - Int64(Date().timeIntervalSince1970 * 1000))
         if let score = try scores.filter(Keys.userId, .equals, userID).first()?.score {
             try json.set(Keys.achievedScore, score)
         } else {
@@ -159,6 +165,11 @@ extension Topic: JSONConvertible {
         if let level: Level = try self.level.get() {
             try json.set("level_id", level.id)
             try json.set("level_name", level.name)
+        }
+        if let _ = try favorites.filter(Keys.userId, .equals, userID).first() {
+            try json.set("isFavorite", true)
+        } else {
+            try json.set("isFavorite", false)
         }
         return json
     }

@@ -154,7 +154,6 @@ class UserCollection: RouteCollection {
             try AuthToken.makeQuery().filter("user_id", .equals, id).delete()
             let token = AuthToken(userID: id)
             try token.save()
-            try user.save()
             var json = try user.makeJSON()
             try json.set(Keys.token, token.token)
             return json

@@ -1,7 +1,8 @@
 {
-    "hostname": "db4free.net",
-    "user": "phongle016",
-    "password": "hp050769",
-    "database": "eyevapor",
-    "encoding": "utf8"
+    "hostname": "phongle.mysql.database.azure.com",
+    "user": "myadmin@phongle",
+    "password": "hp@050769",
+    "database": "eye",
+    "encoding": "utf8",
+    "port": 3306
 }

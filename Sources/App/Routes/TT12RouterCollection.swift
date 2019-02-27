@@ -221,7 +221,7 @@ class TT12RouterCollection: RouteCollection {
             print(queryStr)
             if let nodes = try self.drop.database?.raw(queryStr).array {
                 var json = JSON()
-                try json.set("datas", try self.makeJsonTopic(nodes: nodes))
+                try json.set("data", try self.makeJsonTopic(nodes: nodes))
                 return json
             }
             throw Abort.badRequest

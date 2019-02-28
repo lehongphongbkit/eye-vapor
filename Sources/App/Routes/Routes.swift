@@ -10,8 +10,7 @@ extension Droplet {
     func setupRoutes() throws {
         let v1 = grouped("v1")
         try v1.collection(UserCollection(drop: self))
-        let vpn = v1.grouped("vpn")
-        try vpn.collection(TT12RouterCollection(drop: self))
+        try v1.collection(TT12RouterCollection(drop: self))
       
 //        v1.post("notification") { (request) -> ResponseRepresentable in
 //            guard let json = request.json else {

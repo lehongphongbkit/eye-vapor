@@ -59,6 +59,27 @@ final class Vocabulary: Model {
         try row.set(Keys.picture, picture)
         return row
     }
+    
+    public static func makeJsonVocabs(nodes: [Node]) throws -> [JSON] {
+        var vocabs: [JSON] = []
+        try nodes.forEach({ (nodeVocab) in
+            var vocab = JSON()
+            try vocab.set(Vocabulary.Keys.id, nodeVocab.get("vocab_id") as Int)
+            try vocab.set(Vocabulary.Keys.word, nodeVocab.get(Vocabulary.Keys.word) as String)
+            try vocab.set(Vocabulary.Keys.spell, nodeVocab.get(Vocabulary.Keys.spell) as String)
+            try vocab.set(Vocabulary.Keys.type, nodeVocab.get(Vocabulary.Keys.type) as String)
+            try vocab.set(Vocabulary.Keys.translate, nodeVocab.get(Vocabulary.Keys.translate) as String)
+            try vocab.set(Vocabulary.Keys.picture, nodeVocab.get(Vocabulary.Keys.picture) as String)
+            var example = JSON()
+            try example.set(Example.Keys.id, nodeVocab.get("example_id") as Int)
+            try example.set(Example.Keys.exampleEng, nodeVocab.get(Example.Keys.exampleEng) as String)
+            try example.set(Example.Keys.exampleVie, nodeVocab.get(Example.Keys.exampleVie) as String)
+            try example.set(Example.Keys.vocabularyId, nodeVocab.get("vocab_id") as Int)
+            try vocab.set("examples", [example])
+            vocabs.append(vocab)
+        })
+        return vocabs
+    }
 }
 
 // MARK: - Relationships

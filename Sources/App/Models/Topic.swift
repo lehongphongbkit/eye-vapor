@@ -10,9 +10,9 @@ import FluentProvider
 import HTTP
 
 final class Topic: Model {
-    
+
     // MARK: - Defining
-    
+
     struct Keys {
         static let id = "id"
         static let name = "name"
@@ -30,28 +30,30 @@ final class Topic: Model {
         static let isFavorite = "isFavorite"
         static let description = "description"
     }
-    
+
     // MARK: - Properties
     let storage = Storage()
     var id: Identifier?
     var name: String = ""
-    var status: String = ""
+    var status: Bool = true
     var levelId: Identifier
     var userId: Identifier
     var isSystem: Bool = false
     var totalLike: Identifier = 0
     var totalComment: Identifier = 0
+    var description: String?
     // MARK: - Initializing
-    
-    init(name: String, status: String, levelId: Int, userId: Int, totalLike: Int, totalComment: Int) {
+
+    init(name: String, status: Bool, levelId: Int, userId: Int, totalLike: Int, totalComment: Int, description: String?) {
         self.name = name;
         self.status = status;
         self.levelId = Identifier(levelId)
         self.userId = Identifier(userId)
         self.totalLike = Identifier(totalLike)
         self.totalComment = Identifier(totalComment)
+        self.description = description
     }
-    
+
     init(row: Row) throws {
         id = try row.get(Keys.id)
         name = try row.get(Keys.name)
@@ -61,8 +63,9 @@ final class Topic: Model {
         isSystem = try row.get(Keys.isSystem)
         totalLike = try row.get(Keys.totalLike)
         totalComment = try row.get(Keys.totalComment)
+        description = try row.get(Keys.description)
     }
-    
+
     func makeRow() throws -> Row {
         var row = Row()
         try row.set(Keys.id, id)
@@ -73,34 +76,63 @@ final class Topic: Model {
         try row.set(Keys.isSystem, isSystem)
         try row.set(Keys.totalLike, totalLike)
         try row.set(Keys.totalComment, totalComment)
+        try row.set(Keys.description, description)
         return row
+    }
+
+    public static func makeJsonTopics(nodes: [Node]) throws -> [JSON] {
+        var datas: [JSON] = []
+        try nodes.forEach({ (node) in
+            datas.append(try makeJsonTopic(node: node))
+        })
+        return datas
+    }
+
+    public static func makeJsonTopic(node: Node) throws -> JSON {
+        var data = JSON()
+        try data.set(Topic.Keys.id, node.get(Topic.Keys.id) as Int)
+        try data.set(Topic.Keys.name, node.get(Topic.Keys.name) as String)
+        try data.set(Topic.Keys.isSystem, node.get(Topic.Keys.isSystem) as Bool)
+        try data.set(Topic.Keys.status, node.get(Topic.Keys.status) as Bool)
+        try data.set(Topic.Keys.userId, node.get(Topic.Keys.userId) as Int)
+        try data.set(Topic.Keys.levelId, node.get(Topic.Keys.levelId) as Int)
+        try data.set(Topic.Keys.levelName, node.get(Topic.Keys.levelName) as String)
+        try data.set(Topic.Keys.totalLike, node.get(Topic.Keys.totalLike) as Int)
+        try data.set(Topic.Keys.totalComment, node.get(Topic.Keys.totalComment) as Int)
+        let totalVocab: Int = try node.get(Topic.Keys.totalVocab)
+        try data.set(Topic.Keys.totalVocab, totalVocab)
+        try data.set(Topic.Keys.totalScore, totalVocab * SCORE_OF_VOCAB)
+        try data.set(Topic.Keys.achievedScore, node.get(Topic.Keys.achievedScore) as Int)
+        try data.set(Topic.Keys.description, node.get(Topic.Keys.description) as String)
+        try data.set(Topic.Keys.isFavorite, node.get(Topic.Keys.isFavorite) as Bool)
+        return data
     }
 }
 
 // MARK: - Relationships
 
 extension Topic {
-    
+
     var user: Parent<Topic, User> {
         return parent(id: userId)
     }
-    
+
     var level: Parent<Topic, Level> {
         return parent(id: levelId)
     }
-    
+
     var comments: Children<Topic, XIIComment> {
         return children()
     }
-    
+
     var favorites: Children<Topic, Favorite> {
         return children()
     }
-    
+
     var vocabularies: Siblings<Topic, Vocabulary, Pivot<Topic, Vocabulary>> {
         return siblings()
     }
-    
+
     var scores: Children<Topic, Score> {
         return children()
     }
@@ -111,13 +143,14 @@ extension Topic {
 extension Topic: JSONConvertible {
     convenience init(json: JSON) throws {
         self.init(name: try json.get(Keys.name),
-                  status: try json.get(Keys.status),
-                  levelId: try json.get(Keys.levelId),
-                  userId: try json.get(Keys.userId),
-                  totalLike: try json.get(Keys.totalLike),
-                  totalComment: try json.get(Keys.totalComment))
+            status: try json.get(Keys.status),
+            levelId: try json.get(Keys.levelId),
+            userId: try json.get(Keys.userId),
+            totalLike: try json.get(Keys.totalLike),
+            totalComment: try json.get(Keys.totalComment),
+            description: try json.get(Keys.description))
     }
-    
+
     func makeJSON() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -125,7 +158,7 @@ extension Topic: JSONConvertible {
         try json.set(Keys.status, status)
         return json
     }
-    
+
     func makeFullJson() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -140,7 +173,7 @@ extension Topic: JSONConvertible {
         }
         return json
     }
-    
+
     func makeFullJson(userID: Identifier) throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -149,7 +182,7 @@ extension Topic: JSONConvertible {
         try json.set(Keys.status, status)
         try json.set(Keys.totalComment, totalComment)
         let start = Int64(Date().timeIntervalSince1970 * 1000)
-        let totalVocab  = try vocabularies.count()
+        let totalVocab = try vocabularies.count()
         try json.set(Keys.totalVocab, totalVocab)
         try json.set(Keys.totalScore, totalVocab * SCORE_OF_VOCAB)
         print(start - Int64(Date().timeIntervalSince1970 * 1000))
@@ -173,7 +206,7 @@ extension Topic: JSONConvertible {
         }
         return json
     }
-    
+
     func makeTopJson() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -194,7 +227,7 @@ extension Topic: JSONConvertible {
         }
         return json
     }
-    
+
     func makeDetailJson() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -227,9 +260,10 @@ extension Topic: Preparation {
             builder.parent(Level.self, optional: true)
             builder.int(Keys.totalLike)
             builder.int(Keys.totalComment)
+            builder.string(Keys.description)
         }
     }
-    
+
     static func revert(_ database: Database) throws {
         try database.delete(self)
     }
@@ -240,11 +274,12 @@ extension Topic: NodeInitializable {
     convenience init(node: Node) throws {
         let id: Int = try node.get(Keys.id)
         self.init(name: try node.get(Keys.name),
-                  status: try node.get(Keys.status),
-                  levelId: try node.get(Keys.levelId),
-                  userId: try node.get(Keys.userId),
-                  totalLike: try node.get(Keys.totalLike),
-                  totalComment: try node.get(Keys.totalComment))
+            status: try node.get(Keys.status),
+            levelId: try node.get(Keys.levelId),
+            userId: try node.get(Keys.userId),
+            totalLike: try node.get(Keys.totalLike),
+            totalComment: try node.get(Keys.totalComment),
+            description: try node.get(Keys.description))
         self.id = Identifier(id)
     }
 }
@@ -256,7 +291,7 @@ extension Topic: Updateable {
         return [
             UpdateableKey(Keys.name, String.self) { topic, name in
                 topic.name = name
-            }, UpdateableKey(Keys.status, String.self) { topic, status in
+            }, UpdateableKey(Keys.status, Bool.self) { topic, status in
                 topic.status = status
             }, UpdateableKey(Keys.isSystem, Bool.self) { topic, isSystem in
                 topic.isSystem = isSystem
@@ -264,6 +299,8 @@ extension Topic: Updateable {
                 topic.totalLike = Identifier(totalLike)
             }, UpdateableKey(Keys.totalComment, Int.self) { topic, totalComment in
                 topic.totalComment = Identifier(totalComment)
+            }, UpdateableKey(Keys.description, String.self) { topic, description  in
+                topic.description = description
             }
         ]
     }
@@ -273,4 +310,4 @@ extension Topic: Updateable {
 
 extension Topic: ResponseRepresentable { }
 
-extension Topic: Timestampable {}
+extension Topic: Timestampable { }

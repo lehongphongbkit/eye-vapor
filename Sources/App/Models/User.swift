@@ -11,9 +11,9 @@ import HTTP
 import AuthProvider
 
 final class User: Model {
-    
+
     // MARK: - Defining
-    
+
     struct Keys {
         static let id = "id"
         static let name = "name"
@@ -28,10 +28,10 @@ final class User: Model {
         static let isAdmin = "is_admin"
         static let totalScore = "total_score"
     }
-    
+
     // MARK: - Properties
     let storage = Storage()
-    
+
     var name: String
     var password: String = ""
     var phone: String?
@@ -43,9 +43,9 @@ final class User: Model {
     var levelId: Identifier = 1
     var isAdmin = false
     var totalScore: Identifier = 0
-    
+
     // MARK: - Initializing
-    
+
     init(name: String, phone: String?, email: String, avatarUrl: String?, passWord: String, deviceToken: String?, gender: Bool?, birthday: String?) {
         self.name = name
         self.password = passWord
@@ -56,9 +56,9 @@ final class User: Model {
         self.deviceToken = deviceToken
         self.gender = gender
         self.birthday = birthday
-        
+
     }
-    
+
     init(row: Row) throws {
         password = try row.get(Keys.password)
         name = try row.get(Keys.name)
@@ -72,7 +72,7 @@ final class User: Model {
         isAdmin = try row.get(Keys.isAdmin)
         totalScore = try row.get(Keys.totalScore)
     }
-    
+
     func makeRow() throws -> Row {
         var row = Row()
         try row.set(Keys.name, name)
@@ -88,6 +88,60 @@ final class User: Model {
         try row.set(Keys.totalScore, totalScore)
         return row
     }
+
+    public static func makeJsonUser(node: Node) throws -> JSON {
+        var json = JSON()
+        try json.set(User.Keys.id, node.get(User.Keys.id) as Int)
+        try json.set(User.Keys.name, node.get(User.Keys.name) as String)
+        try json.set(User.Keys.phone, node.get(User.Keys.phone) as String)
+        try json.set(User.Keys.email, node.get(User.Keys.email) as String)
+        let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
+        if let avatarUrl = avatarUrl {
+            try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+        }
+        let gender: Int? = try node.get(User.Keys.gender)
+        if let gender = gender {
+            try json.set(User.Keys.gender, gender)
+        }
+        let birthday: String? = try node.get(User.Keys.birthday)
+        if let birthday = birthday {
+            try json.set(User.Keys.birthday, birthday)
+        }
+        try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
+        try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
+        try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
+        try json.set("level_name", node.get("level_name") as String)
+        return json
+    }
+
+    public static func makeJsonUsers(nodes: [Node]) throws -> [JSON] {
+        var datas: [JSON] = []
+        try nodes.forEach({ (node) in
+            var json = JSON()
+            try json.set(User.Keys.id, node.get(User.Keys.id) as Int)
+            try json.set(User.Keys.name, node.get(User.Keys.name) as String)
+            try json.set(User.Keys.phone, node.get(User.Keys.phone) as String)
+            try json.set(User.Keys.email, node.get(User.Keys.email) as String)
+            let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
+            if let avatarUrl = avatarUrl {
+                try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            }
+            let gender: Int? = try node.get(User.Keys.gender)
+            if let gender = gender {
+                try json.set(User.Keys.gender, gender)
+            }
+            let birthday: String? = try node.get(User.Keys.birthday)
+            if let birthday = birthday {
+                try json.set(User.Keys.birthday, birthday)
+            }
+            try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
+            try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
+            try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
+            try json.set("level_name", node.get("level_name") as String)
+            datas.append(json)
+        })
+        return datas
+    }
 }
 
 
@@ -97,7 +151,7 @@ extension User {
     var favorites: Siblings<User, Topic, Favorite> {
         return siblings()
     }
-    
+
 //    var promotions: Siblings<User, Promotion, Pivot<User, Promotion>> {
 //        return siblings()
 //    }
@@ -105,12 +159,12 @@ extension User {
 //    var comments: Children<User, Comment> {
 //        return children()
 //    }
-    
+
     var level: Parent<User, Level> {
         return parent(id: levelId)
     }
-    
-    
+
+
 //    var notifications: Siblings<User, Notification, Pivot<User, Notification>> {
 //        return siblings()
 //    }
@@ -120,19 +174,19 @@ extension User {
 // MARK: - JSONConvertible
 
 extension User: JSONConvertible {
-    
+
     convenience init(json: JSON) throws {
         self.init(name: try json.get(Keys.name),
-                  phone: try json.get(Keys.phone),
-                  email: try json.get(Keys.email),
-                  avatarUrl: "",
-                  passWord: "",
-                  deviceToken: try json.get(Keys.deviceToken),
-                  gender: try json.get(Keys.gender),
-                  birthday: try json.get(Keys.birthday)
+            phone: try json.get(Keys.phone),
+            email: try json.get(Keys.email),
+            avatarUrl: "",
+            passWord: "",
+            deviceToken: try json.get(Keys.deviceToken),
+            gender: try json.get(Keys.gender),
+            birthday: try json.get(Keys.birthday)
         )
     }
-    
+
     func makeJSON() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -152,7 +206,7 @@ extension User: JSONConvertible {
         try json.set("level", try level.get()?.makeJSON())
         return json
     }
-    
+
     func sortJSON() throws -> JSON {
         var json = JSON()
         try json.set(Keys.id, id)
@@ -160,7 +214,7 @@ extension User: JSONConvertible {
         if let avatarUrl = avatarUrl {
             try json.set(Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
         }
-        
+
         try json.set(Keys.totalScore, totalScore)
         return json
     }
@@ -169,7 +223,7 @@ extension User: JSONConvertible {
 // MARK: - Preparation
 
 extension User: Preparation {
-    
+
     static func prepare(_ database: Database) throws {
         try database.create(self) { builder in
             builder.id()
@@ -186,7 +240,7 @@ extension User: Preparation {
             builder.int(Keys.totalScore)
         }
     }
-    
+
     static func revert(_ database: Database) throws {
         try database.delete(self)
     }
@@ -201,18 +255,18 @@ extension User: TokenAuthenticatable {
 // MARK: - PasswordAuthenticatable
 extension User: PasswordAuthenticatable { }
 extension Request {
-    
+
     func login(drop: Droplet) throws -> User? {
         guard let json = json else {
             throw Abort(
-                .badRequest,
+                    .badRequest,
                 metadata: nil,
                 reason: "Data wrong"
             )
         }
         let mail: String = try json.get(User.Keys.email)
         var password: String = try json.get(User.Keys.password)
-        
+
         let user = try User.makeQuery().filter(User.Keys.email, mail).first()
         guard let userGet = user else { return nil }
         password = try drop.hash.make(password.makeBytes()).makeString()
@@ -226,7 +280,7 @@ extension Request {
         }
         return nil
     }
-    
+
     func makeUser(drop: Droplet) throws -> User? {
         guard let json = json else {
             return nil
@@ -238,7 +292,7 @@ extension Request {
         user.password = passwordHart
         return user
     }
-    
+
     func user() throws -> User {
         return try auth.assertAuthenticated()
     }
@@ -247,7 +301,7 @@ extension Request {
 // MARK: - Updateable
 
 extension User: Updateable {
-    
+
     public static var updateableKeys: [UpdateableKey<User>] {
         return [
             UpdateableKey(Keys.name, String.self) { user, name in

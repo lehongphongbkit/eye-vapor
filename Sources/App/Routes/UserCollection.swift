@@ -51,32 +51,6 @@ class UserCollection: RouteCollection {
         let tokenMiddleware = TokenAuthenticationMiddleware(User.self)
         let auth = user.grouped(tokenMiddleware)
         
-        
-        func makeJsonUser(node: Node) throws -> JSON {
-            var json = JSON()
-            try json.set(User.Keys.id, node.get(User.Keys.id) as Int)
-            try json.set(User.Keys.name, node.get(User.Keys.name) as String)
-            try json.set(User.Keys.phone, node.get(User.Keys.phone) as String)
-            try json.set(User.Keys.email, node.get(User.Keys.email) as String)
-            let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
-            if let avatarUrl = avatarUrl {
-                try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
-            }
-            let gender: Int? = try node.get(User.Keys.gender)
-            if let gender = gender {
-                try json.set(User.Keys.gender, gender)
-            }
-            let birthday: String? = try node.get(User.Keys.birthday)
-            if let birthday = birthday {
-                try json.set(User.Keys.birthday, birthday)
-            }
-            try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
-            try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
-            try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
-            try json.set("level_name", node.get("level_name") as String)
-            return json
-        }
-        
         // MARK: - Register
         user.post(Keys.register) { req -> ResponseRepresentable in
             var nameValue = ""
@@ -182,7 +156,7 @@ class UserCollection: RouteCollection {
             try self.drop.database?.raw(call)
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
-            var json = try makeJsonUser(node: node)
+            var json = try User.makeJsonUser(node: node)
             try json.set(Keys.token, token.token)
             return json
         }

@@ -165,7 +165,7 @@ class UserCollection: RouteCollection {
             let user = try request.auth.assertAuthenticated(User.self)
             guard let id = try user.assertExists().int else { throw Abort.badRequest }
             try self.drop.database?.raw("DELETE FROM auth_tokens WHERE user_id = \(id)")
-            return Response(status: .ok)
+            return Response(status: .noContent)
         }
         
         //MARK: - Me:

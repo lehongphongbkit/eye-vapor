@@ -274,7 +274,7 @@ class TT12RouterCollection: RouteCollection {
             return json
         }
 
-        //MARK: - List topic mine
+        //MARK: - Get my topic
         topics.get("mine") { (request) -> ResponseRepresentable in
             var page = 0
             var limit = 10
@@ -308,8 +308,7 @@ class TT12RouterCollection: RouteCollection {
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
-                + "order by created_at desc "
-                + "FROM  topics where user_id = \(userID) LIMIT \(page * limit), \(limit)"
+                + "FROM  topics where user_id = \(userID) order by created_at desc LIMIT \(page * limit), \(limit)"
             print(queryStr)
             if let nodes = try self.drop.database?.raw(queryStr).array {
                 var json = JSON()

@@ -274,8 +274,8 @@ class TT12RouterCollection: RouteCollection {
             return json
         }
 
-        //MARK: - List topic user create
-        topics.get("create") { (request) -> ResponseRepresentable in
+        //MARK: - List topic mine
+        topics.get("mine") { (request) -> ResponseRepresentable in
             var page = 0
             var limit = 10
             let user = try request.auth.assertAuthenticated(User.self)
@@ -308,6 +308,7 @@ class TT12RouterCollection: RouteCollection {
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
+                + "order by created_at desc "
                 + "FROM  topics where user_id = \(userID) LIMIT \(page * limit), \(limit)"
             print(queryStr)
             if let nodes = try self.drop.database?.raw(queryStr).array {

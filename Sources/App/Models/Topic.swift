@@ -80,6 +80,39 @@ final class Topic: Model {
         return row
     }
 
+    public static func makeJsonTopicSocials(nodes: [Node]) throws -> [JSON] {
+        var datas: [JSON] = []
+        try nodes.forEach({ (node) in
+            datas.append(try makeJsonTopicSocial(node: node))
+        })
+        return datas
+    }
+
+    public static func makeJsonTopicSocial(node: Node) throws -> JSON {
+        var data = JSON()
+        try data.set(Topic.Keys.id, node.get(Topic.Keys.id) as Int)
+        try data.set(Topic.Keys.name, node.get(Topic.Keys.name) as String)
+        try data.set(Topic.Keys.status, node.get(Topic.Keys.status) as Bool)
+        try data.set(Topic.Keys.levelId, node.get(Topic.Keys.levelId) as Int)
+        try data.set(Topic.Keys.levelName, node.get(Topic.Keys.levelName) as String)
+        try data.set(Topic.Keys.totalLike, node.get(Topic.Keys.totalLike) as Int)
+        try data.set(Topic.Keys.totalComment, node.get(Topic.Keys.totalComment) as Int)
+        try data.set(Topic.Keys.totalVocab, node.get(Topic.Keys.totalVocab) as Int)
+        try data.set(Topic.Keys.description, node.get(Topic.Keys.description) as String)
+        try data.set(Topic.Keys.isFavorite, node.get(Topic.Keys.isFavorite) as Bool)        
+        try data.set("created_at", node.get("created_at") as String)
+        var user = JSON()
+        try user.set(Topic.Keys.id, node.get(Topic.Keys.userId) as Int)
+        try user.set(User.Keys.name, node.get("user_name") as String)
+        try user.set(User.Keys.email, node.get(User.Keys.email) as String)
+        let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
+        if let avatarUrl = avatarUrl {
+            try user.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+        }
+        try data.set("from", user)
+        return data
+    }
+
     public static func makeJsonTopics(nodes: [Node]) throws -> [JSON] {
         var datas: [JSON] = []
         try nodes.forEach({ (node) in
@@ -307,7 +340,7 @@ extension Topic: Updateable {
                 topic.totalLike = Identifier(totalLike)
             }, UpdateableKey(Keys.totalComment, Int.self) { topic, totalComment in
                 topic.totalComment = Identifier(totalComment)
-            }, UpdateableKey(Keys.description, String.self) { topic, description  in
+            }, UpdateableKey(Keys.description, String.self) { topic, description in
                 topic.description = description
             }
         ]

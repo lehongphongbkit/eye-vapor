@@ -22,6 +22,7 @@ final class XIIComment: Model {
         static let userId = "user_id"
         static let topicId = "topic_id"
         static let user = "user"
+        static let createAt = "created_at"
     }
     
     init(content: String, userId: Int, topicId: Int) {
@@ -42,6 +43,22 @@ final class XIIComment: Model {
         try row.set(XIIComment.Keys.topicId, topicId)
         try row.set(XIIComment.Keys.userId, userId)
         return row
+    }
+    
+    static func makeJSON(nodes: [Node]) throws -> [JSON] {
+        var datas = [JSON]()
+        try nodes.forEach({ (node) in
+            var json = JSON()
+            try json.set(Keys.id, node.get(Keys.id) as Int)
+            try json.set(Keys.content, node.get(Keys.content) as String)
+            try json.set(Keys.createAt, node.get(Keys.createAt) as Date)
+            var user = JSON()
+            try user.set(User.Keys.id, node.get("user_id") as Int)
+            try user.set(User.Keys.name, node.get(User.Keys.name) as String)
+            try json.set("user", user)
+            datas.append(json)
+        })
+        return datas
     }
 }
 
@@ -84,6 +101,7 @@ extension XIIComment: JSONConvertible {
         var json = JSON()
         try json.set(XIIComment.Keys.id, id)
         try json.set(XIIComment.Keys.content, content)
+        try json.set(XIIComment.Keys.createAt, createdAt)
         let user = try self.user.get()
         try json.set(XIIComment.Keys.user, user?.sortJSON())
         return json

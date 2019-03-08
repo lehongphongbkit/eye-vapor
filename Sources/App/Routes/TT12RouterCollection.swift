@@ -45,6 +45,7 @@ class TT12RouterCollection: RouteCollection {
         let auth = user.grouped(tokenMiddleware)
         let topics = auth.grouped("topics")
         let topic = auth.grouped("topic")
+        let comment = topic.grouped("comment")
 
         //MARK: - Search vocabularies
         builder.get("vocabularies") { (request) -> ResponseRepresentable in
@@ -153,7 +154,7 @@ class TT12RouterCollection: RouteCollection {
             guard let userID = try user.assertExists().int else { throw Abort.badRequest }
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id = \(userID)), 0) as achieved_score, "
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
@@ -260,7 +261,7 @@ class TT12RouterCollection: RouteCollection {
             guard let userID = try user.assertExists().int else { throw Abort.badRequest }
             let queryStr1 = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
@@ -309,7 +310,7 @@ class TT12RouterCollection: RouteCollection {
             guard let userID = try user.assertExists().int else { throw Abort.badRequest }
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
@@ -363,7 +364,7 @@ class TT12RouterCollection: RouteCollection {
 
                 let queryStr1 = "SELECT topics.id as id, topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                     + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                    + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                    + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
                     + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                     + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                     + "(select name from levels where levels.id = topics.level_id ) as level_name "
@@ -435,7 +436,7 @@ class TT12RouterCollection: RouteCollection {
                     try topic.save()
                     let queryStr1 = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                         + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                        + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                        + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
                         + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                         + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                         + "(select name from levels where levels.id = topics.level_id ) as level_name "
@@ -494,16 +495,16 @@ class TT12RouterCollection: RouteCollection {
             throw Abort.badRequest
         }
 
-//        //MARK: - Comment
-//        auth.post("comment") { (req) -> ResponseRepresentable in
-//            let user = try req.auth.assertAuthenticated(User.self)
-//            guard let json = req.json,
-//                let topicId = json["topic_id"]?.int,
-//                let content = json["content"]?.string,
-//                let userId = user.id?.int else { throw Abort.badRequest }
-//            let comment = XIIComment(content: content, userId: userId, topicId: topicId)
-//            try comment.save()
-//            if let topic = try comment.topic.get() {
+        //MARK: - Comment
+        comment.post(Int.parameter) { (req) -> ResponseRepresentable in
+            let user = try req.auth.assertAuthenticated(User.self)
+            let topicId = try req.parameters.next(Int.self)
+            guard let json = req.json,
+                let content = json["content"]?.string,
+                let userId = user.id?.int else { throw Abort.badRequest }
+            let comment = XIIComment(content: content, userId: userId, topicId: topicId)
+            try comment.save()
+            if let topic = try comment.topic.get() {
 //                let comments = try topic.comments.makeQuery().filter("user_id", .notEquals, comment.userId).all()
 //                var users: [User] = []
 //                for comment in comments {
@@ -511,35 +512,57 @@ class TT12RouterCollection: RouteCollection {
 //                        if users.contains(where: { (ur) -> Bool in
 //                            ur.id == user.id
 //                        }) { continue }
-//                        if let deviceTokenNeedPush = user.deviceToken,
-//                            !deviceTokenNeedPush.isEmpty {
-//                            let payload = Payload()
-//                            payload.extra = try NotificationManager.shared.createExtraPayload(userComment: user, userReceive: user, topic: topic, comment: comment, count: comments.count)
-//                            let pushMessage = ApplePushMessage(topic: "com.tuanma.thuctap.10", priority: .immediately, payload: payload, sandbox: true)
-//                            try NotificationManager.shared.send(pushMessage, to: deviceTokenNeedPush)
-//                        }
+////                        if let deviceTokenNeedPush = user.deviceToken,
+////                            !deviceTokenNeedPush.isEmpty {
+////                            let payload = Payload()
+////                            payload.extra = try NotificationManager.shared.createExtraPayload(userComment: user, userReceive: user, topic: topic, comment: comment, count: comments.count)
+////                            let pushMessage = ApplePushMessage(topic: "com.tuanma.thuctap.10", priority: .immediately, payload: payload, sandbox: true)
+////                            try NotificationManager.shared.send(pushMessage, to: deviceTokenNeedPush)
+////                        }
 //                        users.append(user)
 //                    }
 //                }
-//                topic.totalComment = Identifier((topic.totalComment.int ?? 0) + 1)
-//                try topic.save()
-//            }
-//            return try comment.makeJSON()
-//        }
+                topic.totalComment = Identifier((topic.totalComment.int ?? 0) + 1)
+                try topic.save()
+            }
+            return try comment.makeJSON()
+        }
 
-        //MARK: - get topic comment
-        auth.get("comment/topic", Int.parameter) { (request) -> ResponseRepresentable in
+        //MARK: - get comment topic
+        comment.get(Int.parameter) { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
             if let userID = try user.assertExists().int {
                 let id = try request.parameters.next(Int.self)
-                let topic = try Topic.makeQuery().filter(raw: "(user_id = \(userID) OR status = '0' OR is_system = \(true)) AND id = \(id)").first()
-                if let topic = topic {
-                    var json: JSON = JSON()
-                    try json.set("data", try topic.comments.all().makeJSON())
-                    return json
-                } else {
-                    throw Abort.contentNotFound
+                var page = 0
+                var limit = 10
+                if let queryString = request.uri.query {
+                    let queryStringArray = queryString.components(separatedBy: "&")
+                    for queryString in queryStringArray {
+                        let queryArray = queryString.components(separatedBy: "=")
+                        if queryArray.count < 2 {
+                            throw Abort.badRequest
+                        }
+                        let key: String = queryArray[0]
+                        switch key {
+                        case "page":
+                            if let value = queryArray[1].int {
+                                page = value
+                            }
+                        case "limit":
+                            if let value = queryArray[1].int {
+                                limit = value
+                            }
+                        default:
+                            break
+                        }
+                    }
                 }
+                let queryStr = "SELECT cmt.id as id, content, cmt.created_at as created_at, user_id, name FROM x_i_i_comments as cmt inner join users on cmt.user_id = users.id where topic_id = \(id) order by cmt.created_at desc LIMIT \(page * limit), \(limit)"
+                guard let nodes = try self.drop.database?.raw(queryStr).array else { throw Abort.contentNotFound }
+                var json = JSON()
+                try json.set("data", XIIComment.makeJSON(nodes: nodes))
+                try json.set("have_next_page", nodes.count == limit)
+                return json
             }
             throw Abort.badRequest
         }
@@ -625,7 +648,7 @@ class TT12RouterCollection: RouteCollection {
             guard let userID = try user.assertExists().int else { throw Abort.badRequest }
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, topics.user_id as user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id), 0) as achieved_score, "
+                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
                 + "case when description IS NULL or description = '' then (select GROUP_CONCAT(word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "

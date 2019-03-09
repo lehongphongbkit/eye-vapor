@@ -11,11 +11,11 @@ import HTTP
 
 final class XIIComment: Model {
     let storage = Storage()
-    
+
     var content: String
     var userId: Identifier
     var topicId: Identifier
-    
+
     struct Keys {
         static let id = "id"
         static let content = "content"
@@ -24,19 +24,19 @@ final class XIIComment: Model {
         static let user = "user"
         static let createAt = "created_at"
     }
-    
+
     init(content: String, userId: Int, topicId: Int) {
         self.content = content
         self.userId = Identifier(userId)
         self.topicId = Identifier(topicId)
     }
-    
+
     init(row: Row) throws {
         content = try row.get(XIIComment.Keys.content)
         userId = try row.get(XIIComment.Keys.userId)
         topicId = try row.get(XIIComment.Keys.topicId)
     }
-    
+
     func makeRow() throws -> Row {
         var row = Row()
         try row.set(XIIComment.Keys.content, content)
@@ -44,7 +44,7 @@ final class XIIComment: Model {
         try row.set(XIIComment.Keys.userId, userId)
         return row
     }
-    
+
     static func makeJSON(nodes: [Node]) throws -> [JSON] {
         var datas = [JSON]()
         try nodes.forEach({ (node) in
@@ -55,6 +55,9 @@ final class XIIComment: Model {
             var user = JSON()
             try user.set(User.Keys.id, node.get("user_id") as Int)
             try user.set(User.Keys.name, node.get(User.Keys.name) as String)
+            if let avatarUrl: String = try node.get(User.Keys.avatarUrl) {
+                try user.set(User.Keys.avatarUrl, avatarUrl)
+            }
             try json.set("user", user)
             datas.append(json)
         })
@@ -73,7 +76,7 @@ extension XIIComment: Preparation {
             builder.parent(Topic.self, optional: false)
         }
     }
-    
+
     static func revert(_ database: Database) throws {
         try database.delete(self)
     }
@@ -83,7 +86,7 @@ extension XIIComment {
     var user: Parent<XIIComment, User> {
         return parent(id: userId)
     }
-    
+
     var topic: Parent<XIIComment, Topic> {
         return parent(id: topicId)
     }
@@ -93,10 +96,10 @@ extension XIIComment {
 extension XIIComment: JSONConvertible {
     convenience init(json: JSON) throws {
         self.init(content: try json.get(Keys.content),
-                  userId: try json.get(Keys.userId),
-                  topicId: try json.get(Keys.topicId))
+            userId: try json.get(Keys.userId),
+            topicId: try json.get(Keys.topicId))
     }
-    
+
     func makeJSON() throws -> JSON {
         var json = JSON()
         try json.set(XIIComment.Keys.id, id)
@@ -120,4 +123,4 @@ extension XIIComment: Updateable {
     }
 }
 
-extension XIIComment: Timestampable {}
+extension XIIComment: Timestampable { }

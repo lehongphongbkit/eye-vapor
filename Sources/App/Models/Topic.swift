@@ -107,7 +107,7 @@ final class Topic: Model {
         try user.set(User.Keys.email, node.get(User.Keys.email) as String)
         let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
         if let avatarUrl = avatarUrl {
-            try user.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            try user.set(User.Keys.avatarUrl, avatarUrl)
         }
         try data.set("from", user)
         return data
@@ -143,7 +143,7 @@ final class Topic: Model {
         try user.set(User.Keys.email, node.get(User.Keys.email) as String)
         let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
         if let avatarUrl = avatarUrl {
-            try user.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            try user.set(User.Keys.avatarUrl, avatarUrl)
         }
         try data.set("from", user)
         return data

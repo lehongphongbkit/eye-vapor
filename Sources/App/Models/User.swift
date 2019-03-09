@@ -97,7 +97,7 @@ final class User: Model {
         try json.set(User.Keys.email, node.get(User.Keys.email) as String)
         let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
         if let avatarUrl = avatarUrl {
-            try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            try json.set(User.Keys.avatarUrl, avatarUrl)
         }
         let gender: Int? = try node.get(User.Keys.gender)
         if let gender = gender {
@@ -108,7 +108,6 @@ final class User: Model {
             try json.set(User.Keys.birthday, birthday)
         }
         try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
-        try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
         try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
         try json.set("level_name", node.get("level_name") as String)
         return json
@@ -124,7 +123,7 @@ final class User: Model {
             try json.set(User.Keys.email, node.get(User.Keys.email) as String)
             let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
             if let avatarUrl = avatarUrl {
-                try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+                try json.set(User.Keys.avatarUrl, avatarUrl)
             }
             let gender: Int? = try node.get(User.Keys.gender)
             if let gender = gender {
@@ -135,7 +134,6 @@ final class User: Model {
                 try json.set(User.Keys.birthday, birthday)
             }
             try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
-            try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
             try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
             try json.set("level_name", node.get("level_name") as String)
             datas.append(json)
@@ -194,7 +192,7 @@ extension User: JSONConvertible {
         try json.set(Keys.phone, phone)
         try json.set(Keys.email, email)
         if let avatarUrl = avatarUrl {
-            try json.set(Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            try json.set(Keys.avatarUrl, avatarUrl)
         }
         if let gender = gender {
             try json.set(Keys.gender, gender)
@@ -203,7 +201,10 @@ extension User: JSONConvertible {
             try json.set(Keys.birthday, birthday)
         }
         try json.set(Keys.totalScore, totalScore)
-        try json.set("level", try level.get()?.makeJSON())
+        if let level: Level = try self.level.get() {
+            try json.set(User.Keys.levelId, level.id)
+            try json.set("level_name", level.name)
+        }
         return json
     }
 
@@ -212,7 +213,7 @@ extension User: JSONConvertible {
         try json.set(Keys.id, id)
         try json.set(Keys.name, name)
         if let avatarUrl = avatarUrl {
-            try json.set(Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+            try json.set(Keys.avatarUrl,  avatarUrl)
         }
 
         try json.set(Keys.totalScore, totalScore)

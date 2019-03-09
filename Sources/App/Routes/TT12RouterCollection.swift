@@ -557,7 +557,8 @@ class TT12RouterCollection: RouteCollection {
                         }
                     }
                 }
-                let queryStr = "SELECT cmt.id as id, content, cmt.created_at as created_at, user_id, name FROM x_i_i_comments as cmt inner join users on cmt.user_id = users.id where topic_id = \(id) order by cmt.created_at desc LIMIT \(page * limit), \(limit)"
+                let queryStr = "SELECT cmt.id as id, content, cmt.created_at as created_at, user_id, name, avatarUrl FROM x_i_i_comments as cmt inner join users on cmt.user_id = users.id where topic_id = \(id) order by cmt.created_at desc LIMIT \(page * limit), \(limit)"
+                print(queryStr)
                 guard let nodes = try self.drop.database?.raw(queryStr).array else { throw Abort.contentNotFound }
                 var json = JSON()
                 try json.set("data", XIIComment.makeJSON(nodes: nodes))
@@ -704,7 +705,7 @@ class TT12RouterCollection: RouteCollection {
                         try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
                         let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
                         if let avatarUrl = avatarUrl {
-                            try json.set(User.Keys.avatarUrl, "http://localhost:8080/images/" + avatarUrl)
+                            try json.set(User.Keys.avatarUrl, avatarUrl)
                         }
                         try json.set("rank", node.get("rank") as Int)
                         datas.append(json)

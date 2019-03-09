@@ -133,15 +133,14 @@ class UserCollection: RouteCollection {
             if !fileManager.fileExists(atPath: userDir.path) {
                 try fileManager.createDirectory(at: userDir, withIntermediateDirectories: false, attributes: nil)
             }
-            let userDirWithImage = userDir.appendingPathComponent(imageName)
-            let data = Data(bytes: filebytes)
-            fileManager.createFile(atPath: userDirWithImage.path, contents: data, attributes: nil)
-            user.avatarUrl = user.email + "/" + imageName
+            let upload = UploadImage(droplet: self.drop)
+            let link = try upload.post(data: Data(bytes: filebytes))
+            user.avatarUrl = link
+//            let userDirWithImage = userDir.appendingPathComponent(imageName)
+//            let data = Data(bytes: filebytes)
+//            fileManager.createFile(atPath: userDirWithImage.path, contents: data, attributes: nil)
+//            user.avatarUrl = user.email + "/" + imageName
             try user.save()
-//            let s3: S3 = try S3(droplet: self.drop)
-//            try s3.put(data: Data(bytes: filebytes), filePath: imageName, accessControl: .publicRead)
-//            user.avatarUrl = imageName
-//            try user.save()
             return try user.makeJSON()
         }
         
@@ -191,13 +190,13 @@ class UserCollection: RouteCollection {
             default :
                 throw Abort.init(.badRequest, metadata: nil, reason: "image sai dinh dang")
             }
-            
-            let s3: S3 = try S3(droplet: self.drop)
-            try s3.put(data: Data(bytes: filebytes), filePath: imageName, accessControl: .publicRead)
-            user.avatarUrl = imageName
-            
-            try user.save()
-            return try user.makeJSON()
+            let upload = UploadImage(droplet: self.drop)
+            if let link = try upload.post(data: Data(bytes: filebytes)) {
+                user.avatarUrl = link
+                try user.save()
+                return try user.makeJSON()
+            }
+            throw Abort.badRequest
         }
         
         // MARK: - Update
@@ -288,9 +287,10 @@ class UserCollection: RouteCollection {
                 throw Abort.init(.badRequest, metadata: nil, reason: "image sai dinh dang")
             }
             
-            let s3: S3 = try S3(droplet: self.drop)
-            try s3.put(data: Data(bytes: filebytes), filePath: imageName, accessControl: .publicRead)
-            user.avatarUrl = imageName
+            let upload = UploadImage(droplet: self.drop)
+            if let link = try upload.post(data: Data(bytes: filebytes)) {
+                user.avatarUrl = link
+            }
             
             try user.save()
             return try user.makeJSON()

@@ -124,24 +124,31 @@ class UserCollection: RouteCollection {
             default :
                 throw Abort.init(.badRequest, metadata: nil, reason: "Image wrong")
             }
-            
-            
-            let baseDir = URL(fileURLWithPath: self.drop.config.workDir).appendingPathComponent("public").appendingPathComponent("images")
-            
-            let userDir = baseDir.appendingPathComponent(user.email)
-            let fileManager = FileManager()
-            if !fileManager.fileExists(atPath: userDir.path) {
-                try fileManager.createDirectory(at: userDir, withIntermediateDirectories: false, attributes: nil)
-            }
             let upload = UploadImage(droplet: self.drop)
             let link = try upload.post(data: Data(bytes: filebytes))
             user.avatarUrl = link
+            try user.save()
+            guard let userID = user.id?.int else { throw Abort.badRequest }
+            let token = AuthToken(userID: userID)
+            let call = "call newToken('\(token.token)', \(userID))"
+            try self.drop.database?.raw(call)
+            var json = try user.makeJSON()
+            try json.set(Keys.token, token.token)
+            return json
+            
+            
+//            let baseDir = URL(fileURLWithPath: self.drop.config.workDir).appendingPathComponent("public").appendingPathComponent("images")
+//
+//            let userDir = baseDir.appendingPathComponent(user.email)
+//            let fileManager = FileManager()
+//            if !fileManager.fileExists(atPath: userDir.path) {
+//                try fileManager.createDirectory(at: userDir, withIntermediateDirectories: false, attributes: nil)
+//            }
+           
 //            let userDirWithImage = userDir.appendingPathComponent(imageName)
 //            let data = Data(bytes: filebytes)
 //            fileManager.createFile(atPath: userDirWithImage.path, contents: data, attributes: nil)
 //            user.avatarUrl = user.email + "/" + imageName
-            try user.save()
-            return try user.makeJSON()
         }
         
         // MARK: - Login

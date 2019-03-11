@@ -93,8 +93,11 @@ final class User: Model {
         var json = JSON()
         try json.set(User.Keys.id, node.get(User.Keys.id) as Int)
         try json.set(User.Keys.name, node.get(User.Keys.name) as String)
-        try json.set(User.Keys.phone, node.get(User.Keys.phone) as String)
         try json.set(User.Keys.email, node.get(User.Keys.email) as String)
+        let phone: String? = try node.get(User.Keys.phone)
+        if let phone = phone {
+            try json.set(User.Keys.phone, phone)
+        }
         let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
         if let avatarUrl = avatarUrl {
             try json.set(User.Keys.avatarUrl, avatarUrl)
@@ -119,7 +122,10 @@ final class User: Model {
             var json = JSON()
             try json.set(User.Keys.id, node.get(User.Keys.id) as Int)
             try json.set(User.Keys.name, node.get(User.Keys.name) as String)
-            try json.set(User.Keys.phone, node.get(User.Keys.phone) as String)
+            let phone: String? = try node.get(User.Keys.phone)
+            if let phone = phone {
+                try json.set(User.Keys.phone, phone)
+            }
             try json.set(User.Keys.email, node.get(User.Keys.email) as String)
             let avatarUrl: String? = try node.get(User.Keys.avatarUrl)
             if let avatarUrl = avatarUrl {
@@ -213,7 +219,7 @@ extension User: JSONConvertible {
         try json.set(Keys.id, id)
         try json.set(Keys.name, name)
         if let avatarUrl = avatarUrl {
-            try json.set(Keys.avatarUrl,  avatarUrl)
+            try json.set(Keys.avatarUrl, avatarUrl)
         }
 
         try json.set(Keys.totalScore, totalScore)

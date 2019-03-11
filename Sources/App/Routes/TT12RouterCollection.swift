@@ -752,6 +752,23 @@ class TT12RouterCollection: RouteCollection {
             throw Abort.badRequest
         }
 
+        auth.get("thisweek") { (request) -> ResponseRepresentable in
+            let user = try request.auth.assertAuthenticated(User.self)
+            if let userID = user.id?.int, let totalScore = user.totalScore.int {
+                let queryStr = "SELECT (SELECT count(id) FROM scores where week(updated_at) = week(now()) and user_id = \(userID) and scores.score >= (select count(id) from topic_vocabulary where topic_id = scores.topic_id) * 15 * 0.8) as pass, (SELECT count(id) FROM topics where user_id = \(userID) and week(now()) = week(created_at)) as created, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as rank"
+                print(queryStr)
+                guard let node = try self.drop.database?.raw(queryStr).array?.first else {
+                    throw Abort.contentNotFound
+                }
+                var json = JSON()
+                try json.set("pass", node.get("pass") as Int)
+                try json.set("created", node.get("created") as Int)
+                try json.set("rank", node.get("rank") as Int)
+                return json
+            }
+            throw Abort.badRequest
+        }
+
 
 //        // MARK: - Favorites
 //        try auth.resource(Keys.favorites, FavoriteController.self)

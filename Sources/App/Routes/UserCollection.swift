@@ -126,13 +126,15 @@ class UserCollection: RouteCollection {
                 user.avatarUrl = link
             }
             try user.save()
-            guard let userID = user.id?.int else { throw Abort.badRequest }
-            let token = AuthToken(userID: userID)
-            let call = "call newToken('\(token.token)', \(userID))"
+            guard let id = user.id?.int else { throw Abort.badRequest }
+            let token = AuthToken(userID: id)
+            let call = "call newToken('\(token.token)', \(id))"
             try self.drop.database?.raw(call)
-            var json = try user.makeJSON()
-            try json.set(Keys.token, token.token)
-            return json
+            let totalScore = user.totalScore.int ?? 0
+            let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
+            print(queryStr)
+            guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
+            return try User.makeJsonUser(node: node)
         }
 
         // MARK: - Login
@@ -144,7 +146,9 @@ class UserCollection: RouteCollection {
             let token = AuthToken(userID: id)
             let call = "call newToken('\(token.token)', \(id))"
             try self.drop.database?.raw(call)
-            let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
+            let totalScore = user.totalScore.int ?? 0
+            let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
+            print(queryStr)
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
             var json = try User.makeJsonUser(node: node)
             try json.set(Keys.token, token.token)
@@ -156,12 +160,6 @@ class UserCollection: RouteCollection {
             guard let id = try user.assertExists().int else { throw Abort.badRequest }
             try self.drop.database?.raw("DELETE FROM auth_tokens WHERE user_id = \(id)")
             return Response(status: .noContent)
-        }
-
-        //MARK: - Me:
-        auth.get("me") { (request) -> ResponseRepresentable in
-            let user = try request.auth.assertAuthenticated(User.self)
-            return try user.makeJSON()
         }
 
         //MARK: - update avatar
@@ -185,7 +183,12 @@ class UserCollection: RouteCollection {
             if let link = try upload.post(data: Data(bytes: filebytes)) {
                 user.avatarUrl = link
                 try user.save()
-                return try user.makeJSON()
+                guard let id = try user.assertExists().int else { throw Abort.badRequest }
+                let totalScore = user.totalScore.int ?? 0
+                let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
+                print(queryStr)
+                guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
+                return try User.makeJsonUser(node: node)
             }
             throw Abort.badRequest
         }
@@ -284,9 +287,25 @@ class UserCollection: RouteCollection {
             }
 
             try user.save()
-            return try user.makeJSON()
+            guard let id = try user.assertExists().int else { throw Abort.badRequest }
+            let totalScore = user.totalScore.int ?? 0
+            let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
+            print(queryStr)
+            guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
+            return try User.makeJsonUser(node: node)
         }
 
+        // MARK: - ME
+        auth.get("me") { request -> ResponseRepresentable in
+            let user = try request.auth.assertAuthenticated(User.self)
+            guard let id = try user.assertExists().int else { throw Abort.badRequest }
+            let totalScore = user.totalScore.int ?? 0
+            let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
+            print(queryStr)
+            guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
+            return try User.makeJsonUser(node: node)
+        }
+        
         // MARK: - Favorites
 //        try auth.resource(Keys.favorites, FavoriteController.self)
 //

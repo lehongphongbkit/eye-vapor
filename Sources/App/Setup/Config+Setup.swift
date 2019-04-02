@@ -39,5 +39,6 @@ extension Config {
         preparations.append(Score.self)
         preparations.append(Pivot<Topic, Vocabulary>.self)
         preparations.append(Favorite.self)
+        preparations.append(DayScore.self)
     }
 }

@@ -110,9 +110,13 @@ final class User: Model {
         if let birthday = birthday {
             try json.set(User.Keys.birthday, birthday)
         }
+        if let token: String? = try node.get("token") {
+            try json.set("token", token)
+        }
         try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
         try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
         try json.set("level_name", node.get("level_name") as String)
+        try json.set("rank", node.get("rank") as Int)
         return json
     }
 

@@ -116,7 +116,7 @@ final class User: Model {
         try json.set(User.Keys.totalScore, node.get(User.Keys.totalScore) as Int)
         try json.set(User.Keys.levelId, node.get(User.Keys.levelId) as Int)
         try json.set("level_name", node.get("level_name") as String)
-        try json.set("rank", node.get("rank") as Int)
+        try json.set("rank", node.get("ranks") as Int)
         return json
     }
 

@@ -1,8 +1,8 @@
 {
-    "hostname": "phongle.mysql.database.azure.com",
-    "user": "myadmin@phongle",
-    "password": "hp@050769",
-    "database": "eye",
+    "hostname": "remotemysql.com",
+    "user": "KVgzsrZfYp",
+    "password": "6chrDJcH0a",
+    "database": "KVgzsrZfYp",
     "encoding": "utf8",
     "port": 3306
 }

@@ -146,8 +146,6 @@ class UserCollection: RouteCollection {
             try AuthToken.makeQuery().filter("user_id", .equals, id).delete()
             let token = AuthToken(userID: id)
             try token.save()
-
-            try self.drop.database?.raw(call)
             let totalScore = user.totalScore.int ?? 0
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as rank FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
             print(queryStr)

@@ -688,8 +688,8 @@ class TT12RouterCollection: RouteCollection {
 
             if let userID = user.id?.int, let totalScore = user.totalScore.int {
 
-                let queryStrRanking = "SELECT @rownum := @rownum + 1 AS rank,  users.id, users.name, avatarUrl, total_score FROM users, (SELECT @rownum := 0) as r where is_admin = 0 ORDER BY total_score DESC LIMIT \(limit)"
-                let queryStrUser = "SELECT users.id, users.name, avatarUrl,  total_score, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as rank FROM users where id = \(userID)"
+                let queryStrRanking = "SELECT @rownum := @rownum + 1 AS ranks,  users.id, users.name, avatarUrl, total_score FROM users, (SELECT @rownum := 0) as r where is_admin = 0 ORDER BY total_score DESC LIMIT \(limit)"
+                let queryStrUser = "SELECT users.id, users.name, avatarUrl,  total_score, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as ranks FROM users where id = \(userID)"
                 print(queryStrUser)
                 guard var nodes = try self.drop.database?.raw(queryStrRanking).array,
                     let user = try self.drop.database?.raw(queryStrUser).array?.first
@@ -707,7 +707,7 @@ class TT12RouterCollection: RouteCollection {
                         if let avatarUrl = avatarUrl {
                             try json.set(User.Keys.avatarUrl, avatarUrl)
                         }
-                        try json.set("rank", node.get("rank") as Int)
+                        try json.set("rank", node.get("ranks") as Int)
                         datas.append(json)
                     })
                     return datas
@@ -755,7 +755,7 @@ class TT12RouterCollection: RouteCollection {
         auth.get("thisweek") { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
             if let userID = user.id?.int, let totalScore = user.totalScore.int {
-                let queryStr = "SELECT (SELECT count(id) FROM scores where WEEKOFYEAR(updated_at) = WEEKOFYEAR(now()) and user_id = \(userID) and scores.score >= (select count(id) from topic_vocabulary where topic_id = scores.topic_id) * 15 * 0.8) as pass, (SELECT count(id) FROM topics where user_id = \(userID) and WEEKOFYEAR(now()) = WEEKOFYEAR(created_at)) as created, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as rank"
+                let queryStr = "SELECT (SELECT count(id) FROM scores where WEEKOFYEAR(updated_at) = WEEKOFYEAR(now()) and user_id = \(userID) and scores.score >= (select count(id) from topic_vocabulary where topic_id = scores.topic_id) * 15 * 0.8) as pass, (SELECT count(id) FROM topics where user_id = \(userID) and WEEKOFYEAR(now()) = WEEKOFYEAR(created_at)) as created, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as ranks"
                 print(queryStr)
                 guard let node = try self.drop.database?.raw(queryStr).array?.first else {
                     throw Abort.contentNotFound
@@ -763,7 +763,7 @@ class TT12RouterCollection: RouteCollection {
                 var json = JSON()
                 try json.set("pass", node.get("pass") as Int)
                 try json.set("created", node.get("created") as Int)
-                try json.set("rank", node.get("rank") as Int)
+                try json.set("rank", node.get("ranks") as Int)
                 return json
             }
             throw Abort.badRequest

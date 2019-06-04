@@ -152,15 +152,24 @@ class TT12RouterCollection: RouteCollection {
             let user = try request.auth.assertAuthenticated(User.self)
             let levelId = try request.parameters.next(Int.self)
             guard let userID = try user.assertExists().int else { throw Abort.badRequest }
-            let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
+            let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                 + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id = \(userID)), 0) as achieved_score, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
-                + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
-                + "(select name from levels where levels.id = topics.level_id ) as level_name "
-                + "FROM topics inner join users on topics.user_id = users.id "
+                + "description, "
+                + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite "
+                + "FROM topics "
                 + "where is_system = true and topics.level_id = \(levelId)"
             print(queryStr)
+
+//            let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
+//                + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
+//                + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id = \(userID)), 0) as achieved_score, "
+//                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+//                + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
+//                + "(select name from levels where levels.id = topics.level_id ) as level_name "
+//                + "FROM topics inner join users on topics.user_id = users.id "
+//                + "where is_system = true and topics.level_id = \(levelId)"
+
             if let nodes = try self.drop.database?.raw(queryStr).array {
                 var json = JSON()
                 try json.set("data", try Topic.makeJsonTopics(nodes: nodes))

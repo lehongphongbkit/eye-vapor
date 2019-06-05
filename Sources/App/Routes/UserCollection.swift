@@ -130,7 +130,7 @@ class UserCollection: RouteCollection {
             try AuthToken.makeQuery().filter("user_id", .equals, id).delete()
             let token = AuthToken(userID: id)
             try token.save()
-            let totalScore = user.totalScore.int ?? 0
+            let totalScore = user.totalScore
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
             print(queryStr)
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
@@ -146,7 +146,7 @@ class UserCollection: RouteCollection {
             try AuthToken.makeQuery().filter("user_id", .equals, id).delete()
             let token = AuthToken(userID: id)
             try token.save()
-            let totalScore = user.totalScore.int ?? 0
+            let totalScore = user.totalScore
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
             print(queryStr)
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
@@ -184,7 +184,7 @@ class UserCollection: RouteCollection {
                 user.avatarUrl = link
                 try user.save()
                 guard let id = try user.assertExists().int else { throw Abort.badRequest }
-                let totalScore = user.totalScore.int ?? 0
+                let totalScore = user.totalScore
                 let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
                 print(queryStr)
                 guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
@@ -288,7 +288,7 @@ class UserCollection: RouteCollection {
 
             try user.save()
             guard let id = try user.assertExists().int else { throw Abort.badRequest }
-            let totalScore = user.totalScore.int ?? 0
+            let totalScore = user.totalScore
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
             print(queryStr)
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
@@ -299,7 +299,7 @@ class UserCollection: RouteCollection {
         auth.get("me") { request -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
             guard let id = try user.assertExists().int else { throw Abort.badRequest }
-            let totalScore = user.totalScore.int ?? 0
+            let totalScore = user.totalScore
             let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks, token FROM users inner join levels on users.level_id = levels.id inner join auth_tokens on users.id = auth_tokens.user_id where users.id = \(id)"
             print(queryStr)
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }

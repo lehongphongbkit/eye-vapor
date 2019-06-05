@@ -248,7 +248,7 @@ class TT12RouterCollection: RouteCollection {
             }
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, topics.created_at as created_at, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                + "description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
                 + "FROM topics inner join users on topics.user_id = users.id "
@@ -271,7 +271,7 @@ class TT12RouterCollection: RouteCollection {
             let queryStr1 = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                 + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                + "description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
                 + "FROM topics inner join users on topics.user_id = users.id where topics.id = \(topicID)"
@@ -320,7 +320,7 @@ class TT12RouterCollection: RouteCollection {
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                 + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                + "description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
                 + "FROM topics inner join users on topics.user_id = users.id where topics.user_id = \(userID) order by created_at desc LIMIT \(page * limit), \(limit)"
@@ -374,7 +374,7 @@ class TT12RouterCollection: RouteCollection {
                 let queryStr1 = "SELECT topics.id as id, topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                     + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                     + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
-                    + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                    + "description, "
                     + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                     + "(select name from levels where levels.id = topics.level_id ) as level_name "
                     + "FROM topics inner join users on topics.user_id = users.id where topics.id = \(topicID)"
@@ -446,7 +446,7 @@ class TT12RouterCollection: RouteCollection {
                     let queryStr1 = "SELECT topics.id as id,  topics.name as name, status, is_system, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                         + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                         + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
-                        + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                        + "description, "
                         + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                         + "(select name from levels where levels.id = topics.level_id ) as level_name "
                         + "FROM topics inner join users on topics.user_id = users.id where topics.id = \(topicID)"
@@ -496,8 +496,20 @@ class TT12RouterCollection: RouteCollection {
                 if let json = req.json {
                     scoreNum = try json.get(Score.Keys.score)
                     topicId = try json.get("topic_id")
-                    let call = "call addScore(\(scoreNum), \(topicId),\(userID))"
-                    try self.drop.database?.raw(call)
+
+                    if let score = try Score.makeQuery().filter(raw: "user_id = \(userID) AND topic_id = \(topicId)").first() {
+                        if scoreNum > score.score {
+                            user.totalScore += scoreNum - score.score
+                            score.score = scoreNum
+                            try score.save()
+                            try user.save()
+                        }
+                    } else {
+                        let score = Score(score: scoreNum, topicId: topicId, userId: userID)
+                        try score.save()
+                        user.totalScore += scoreNum
+                        try user.save()
+                    }
                     return Response(status: .noContent)
                 }
             }
@@ -590,12 +602,20 @@ class TT12RouterCollection: RouteCollection {
                 if topicId == 0 {
                     throw Abort.badRequest
                 }
-                let call = "call likeTopic(\(userID), \(topicId))"
-                try self.drop.database?.raw(call)
+                if let favorite = try Favorite.makeQuery().filter(raw: "user_id = \(userID) AND topic_id = \(topicId)").first() {
+                    try favorite.delete()
+                    let call = "UPDATE topics set total_like = total_like - 1 WHERE id  = \(topicId)"
+                    try self.drop.database?.raw(call)
+                } else {
+                    let favorite = Favorite(userId: userID, topicId: topicId)
+                    try favorite.save()
+                    let call = "UPDATE topics set total_like = total_like + 1 WHERE id  = \(topicId)"
+                    try self.drop.database?.raw(call)
+                }
 
                 let queryStr1 = "SELECT topics.id as id,  topics.name as name, status, user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, topics.created_at as created_at, "
                     + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                    + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                    + "description, "
                     + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                     + "(select name from levels where levels.id = topics.level_id ) as level_name "
                     + "FROM topics inner join users on topics.user_id = users.id where topics.id = \(topicId)"
@@ -638,7 +658,7 @@ class TT12RouterCollection: RouteCollection {
             }
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, topics.user_id as user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, topics.created_at as created_at, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                + "description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
                 + "FROM topics inner join favorites on topics.id = favorites.topic_id inner join users on topics.user_id = users.id where is_system = false and favorites.user_id = \(userID) order by favorites.created_at desc LIMIT \(page * limit), \(limit)"
@@ -659,7 +679,7 @@ class TT12RouterCollection: RouteCollection {
             let queryStr = "SELECT topics.id as id,  topics.name as name, status, is_system, topics.user_id as user_id, users.name as user_name, email, avatarUrl, topics.level_id as level_id, total_like, total_comment, "
                 + "(select count(id) FROM topic_vocabulary where topics.id = topic_vocabulary.topic_id) as total_vocab, "
                 + "IFNULL((select score FROM scores WHERE topics.id = scores.topic_id and scores.user_id =\(userID)), 0) as achieved_score, "
-                + "case when description IS NULL or description = '' then (select GROUP_CONCAT(' ',word) FROM vocabularys inner join topic_vocabulary on  vocabularys.id = topic_vocabulary.vocabulary_id WHERE topic_vocabulary.topic_id = topics.id) else description end as description, "
+                + "description, "
                 + "exists (select id FROM favorites WHERE topics.id = favorites.topic_id  and user_id = \(userID)) as isFavorite, "
                 + "(select name from levels where levels.id = topics.level_id ) as level_name "
                 + "FROM  topics inner join favorites on topics.id = favorites.topic_id inner join users on topics.user_id = users.id where is_system = true and favorites.user_id = \(userID)"
@@ -695,8 +715,8 @@ class TT12RouterCollection: RouteCollection {
                 }
             }
 
-            if let userID = user.id?.int, let totalScore = user.totalScore.int {
-
+            if let userID = user.id?.int {
+                let totalScore = user.totalScore
                 let queryStrRanking = "SELECT @rownum := @rownum + 1 AS ranks,  users.id, users.name, avatarUrl, total_score FROM users, (SELECT @rownum := 0) as r where is_admin = 0 ORDER BY total_score DESC LIMIT \(limit)"
                 let queryStrUser = "SELECT users.id, users.name, avatarUrl,  total_score, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as ranks FROM users where id = \(userID)"
                 print(queryStrUser)
@@ -763,7 +783,8 @@ class TT12RouterCollection: RouteCollection {
 
         auth.get("thisweek") { (request) -> ResponseRepresentable in
             let user = try request.auth.assertAuthenticated(User.self)
-            if let userID = user.id?.int, let totalScore = user.totalScore.int {
+            if let userID = user.id?.int {
+                let totalScore = user.totalScore
                 let queryStr = "SELECT (SELECT count(id) FROM scores where WEEKOFYEAR(updated_at) = WEEKOFYEAR(now()) and user_id = \(userID) and scores.score >= (select count(id) from topic_vocabulary where topic_id = scores.topic_id) * 15 * 0.8) as pass, (SELECT count(id) FROM topics where user_id = \(userID) and WEEKOFYEAR(now()) = WEEKOFYEAR(created_at)) as created, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(userID))  + 1) as ranks"
                 print(queryStr)
                 guard let node = try self.drop.database?.raw(queryStr).array?.first else {

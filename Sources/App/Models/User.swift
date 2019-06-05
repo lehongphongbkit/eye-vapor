@@ -42,7 +42,7 @@ final class User: Model {
     var birthday: String?
     var levelId: Identifier = 1
     var isAdmin = false
-    var totalScore: Identifier = 0
+    var totalScore: Int = 0
 
     // MARK: - Initializing
 
@@ -328,9 +328,9 @@ extension User: Updateable {
             }, UpdateableKey(Keys.birthday, String.self) { user, birthday in
                 user.birthday = birthday
             }, UpdateableKey(Keys.totalScore, Int.self) { user, totalScore in
-                user.totalScore = Identifier(totalScore)
+                user.totalScore = Int(totalScore)
             }, UpdateableKey(Keys.levelId, Int.self) { user, levelId in
-                user.totalScore = Identifier(levelId)
+                user.levelId = Identifier(levelId)
             }
         ]
     }

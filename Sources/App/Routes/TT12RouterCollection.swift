@@ -476,8 +476,15 @@ class TT12RouterCollection: RouteCollection {
                 let id = try req.parameters.next(Int.self)
                 let topic = try Topic.makeQuery().filter(raw: "user_id = \(userID) AND id = \(id)").first()
                 if let topic = topic, let topicID = topic.id?.int {
-                    let call = "call deleteTopic(\(topicID), \(topic.isSystem))"
-                    try self.drop.database?.raw(call)
+                    if topic.isSystem {
+                        try Score.makeQuery().filter(raw: "topic_id = \(topicID)").delete()
+                    } else {
+                        try XIIComment.makeQuery().filter(raw: "topic_id = \(topicID)").delete()
+                    }
+                    try Favorite.makeQuery().filter(raw: "topic_id = \(topicID)").delete()
+                    let sql = "DELETE FROM topic_vocabulary WHERE topic_id = \(topicID)"
+                    try self.drop.database?.raw(sql)
+                    try topic.delete()
                     let response = Response(status: .noContent)
                     return response
                 } else {

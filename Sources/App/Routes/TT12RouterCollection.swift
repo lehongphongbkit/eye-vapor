@@ -510,12 +510,26 @@ class TT12RouterCollection: RouteCollection {
                             score.score = scoreNum
                             try score.save()
                             try user.save()
+                            if let dayScore = try DayScore.makeQuery().filter(raw: "user_id = \(userID) && Date(created_at) = CURRENT_DATE").first() {
+                                dayScore.totalScore += scoreNum
+                                try dayScore.save()
+                            } else {
+                                let dayScore = DayScore(totalScore: scoreNum, userID: userID)
+                                try dayScore.save()
+                            }
                         }
                     } else {
                         let score = Score(score: scoreNum, topicId: topicId, userId: userID)
                         try score.save()
                         user.totalScore += scoreNum
                         try user.save()
+                        if let dayScore = try DayScore.makeQuery().filter(raw: "user_id = \(userID) && Date(created_at) = CURRENT_DATE").first() {
+                            dayScore.totalScore += scoreNum
+                            try dayScore.save()
+                        } else {
+                            let dayScore = DayScore(totalScore: scoreNum, userID: userID)
+                            try dayScore.save()
+                        }
                     }
                     return Response(status: .noContent)
                 }

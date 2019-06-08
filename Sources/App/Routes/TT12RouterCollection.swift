@@ -835,6 +835,21 @@ class TT12RouterCollection: RouteCollection {
             throw Abort.badRequest
         }
 
+        auth.get("scoreweek", Int.parameter) { (request) -> ResponseRepresentable in
+            let userID = try request.parameters.next(Int.self)
+            if let _ = try User.find(userID) {
+                let queryStr = "SELECT id, total_score, date(created_at) as created_at FROM day_scores where user_id = \(userID)  AND  (CURRENT_DATE - INTERVAL WEEKDAY(CURRENT_DATE) - 0 DAY) <= DATE(created_at) and (CURRENT_DATE - INTERVAL WEEKDAY(CURRENT_DATE) - 6 DAY)  >=  DATE(created_at)"
+                print(queryStr)
+                guard let nodes = try self.drop.database?.raw(queryStr).array else {
+                    throw Abort.contentNotFound
+                }
+                var json = JSON()
+                try json.set("data", try DayScore.makeJson(nodes: nodes))
+                return json
+            }
+            throw Abort.badRequest
+        }
+
 
 //        // MARK: - Favorites
 //        try auth.resource(Keys.favorites, FavoriteController.self)

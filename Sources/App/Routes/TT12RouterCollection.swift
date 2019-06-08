@@ -507,16 +507,16 @@ class TT12RouterCollection: RouteCollection {
                     if let score = try Score.makeQuery().filter(raw: "user_id = \(userID) AND topic_id = \(topicId)").first() {
                         if scoreNum > score.score {
                             user.totalScore += scoreNum - score.score
-                            score.score = scoreNum
-                            try score.save()
-                            try user.save()
                             if let dayScore = try DayScore.makeQuery().filter(raw: "user_id = \(userID) && Date(created_at) = CURRENT_DATE").first() {
-                                dayScore.totalScore += scoreNum
+                                dayScore.totalScore += scoreNum - score.score
                                 try dayScore.save()
                             } else {
                                 let dayScore = DayScore(totalScore: scoreNum, userID: userID)
                                 try dayScore.save()
                             }
+                            score.score = scoreNum
+                            try score.save()
+                            try user.save()
                         }
                     } else {
                         let score = Score(score: scoreNum, topicId: topicId, userId: userID)

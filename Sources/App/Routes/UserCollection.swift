@@ -305,6 +305,18 @@ class UserCollection: RouteCollection {
             guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
             return try User.makeJsonUser(node: node)
         }
+
+        auth.get("me", Int.parameter ) { request -> ResponseRepresentable in
+            let id = try request.parameters.next(Int.self)
+            if let user = try User.find(id) {
+                let totalScore = user.totalScore
+                let queryStr = "SELECT users.id, users.name, phone, email, avatarUrl, gender, birthday, total_score, level_id, levels.name as level_name, ((SELECT count(id) FROM users where is_admin = 0 and total_score > \(totalScore)) + (SELECT count(id) FROM users where is_admin = 0 and total_score = \(totalScore) and id < \(id))  + 1) as ranks FROM users inner join levels on users.level_id = levels.id where users.id = \(id)"
+                print(queryStr)
+                guard let node = try self.drop.database?.raw(queryStr).array?.first else { throw Abort.badRequest }
+                return try User.makeJsonUser(node: node)
+            }
+            throw Abort.badRequest
+        }
         
         // MARK: - Favorites
 //        try auth.resource(Keys.favorites, FavoriteController.self)
